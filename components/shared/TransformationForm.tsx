@@ -31,6 +31,9 @@ import {
 import { CustomField } from "./CustomField";
 import { useState, useTransition } from "react";
 import { AspectRatioKey, debounce, deepMergeObjects } from "@/lib/utils";
+import { updateCredits } from "@/lib/actions/user.actions";
+import MediaUploader from "./MediaUploader";
+import TransformedImage from "./TransformedImage";
 
 export const formSchema = z.object({
   title: z.string(),
@@ -56,7 +59,7 @@ const TransformationForm = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTransforming, setIsTransforming] = useState(false);
   const [transformationConfig, setTransformationConfig] = useState(config);
-  const [isPending, startTransition] =  useTransition();
+  const [isPending, startTransition] = useTransition();
 
   const initialValues =
     data && action === "Update"
@@ -85,12 +88,12 @@ const TransformationForm = ({
     onChange: (value: string) => void
   ) => {
     const imageSize = aspectRatioOptions[value as AspectRatioKey];
-    setImage((prevState: any)=>({
-        ...prevState,
-        aspectRatio: imageSize.aspectRatio,
-        width: imageSize.width,
-        height: imageSize.height
-    }))
+    setImage((prevState: any) => ({
+      ...prevState,
+      aspectRatio: imageSize.aspectRatio,
+      width: imageSize.width,
+      height: imageSize.height,
+    }));
     setnewTransformation(transformationType.config);
     return onChange(value);
   };
@@ -101,24 +104,29 @@ const TransformationForm = ({
     type: string,
     onChange: (value: string) => void
   ) => {
-    debounce(()=>{
-        setnewTransformation((prevState: any)=>({   
-            ...prevState,
-            [type]: {
-                ...prevState?.[type],
-                [fieldName === "prompt" ? 'prompt' : 'to']: value
-            }
-        }))
+    debounce(() => {
+      setnewTransformation((prevState: any) => ({
+        ...prevState,
+        [type]: {
+          ...prevState?.[type],
+          [fieldName === "prompt" ? "prompt" : "to"]: value,
+        },
+      }));
 
-        return onChange(value);
-    },1000)
+      return onChange(value);
+    }, 1000);
   };
 
   const onTransformHandler = async () => {
     setIsTransforming(true);
     setTransformationConfig(
-        deepMergeObjects(newTransformation, transformationConfig)
+      deepMergeObjects(newTransformation, transformationConfig)
     );
+
+    setnewTransformation(null);
+    startTransition(async () => {
+      //    await updateCredits(userId, creditFee)
+    });
   };
 
   return (
@@ -168,7 +176,7 @@ const TransformationForm = ({
                 type === "remove" ? "Object to Remove" : "Object to Recolor"
               }
               className="w-full"
-              render={(({ field }) => (
+              render={({ field }) => (
                 <Input
                   value={field.value}
                   className="input-field"
@@ -181,7 +189,7 @@ const TransformationForm = ({
                     )
                   }
                 />
-              ))}
+              )}
             />
 
             {type === "recolor" && (
@@ -190,7 +198,7 @@ const TransformationForm = ({
                 name="color"
                 formLabel="Replacement Color"
                 className="w-full"
-                render={(({ field }) => (
+                render={({ field }) => (
                   <Input
                     value={field.value}
                     className="input-field"
@@ -203,11 +211,37 @@ const TransformationForm = ({
                       )
                     }
                   />
-                ))}
+                )}
               />
             )}
           </div>
         )}
+
+        <div className="media-uploader-field">
+          <CustomField
+            control={form.control}
+            name="publicId"
+            className="flex size-full flex-col"
+            render={({ field }) => (
+              <MediaUploader 
+                onValueChange={field.onChange}
+                setImage={setImage}
+                publicId={field.value}
+                image={image}
+                type={type}
+              />
+            )}
+          />
+          <TransformedImage 
+            image={image}
+            type={type}
+            title={form.getValues().title}
+            isTransforming={isTransforming}
+            setIsTransforming={setIsTransforming}
+            transformationConfig={transformationConfig}
+          />
+        </div>
+
         <div className="flex flex-col gap-4">
           <Button
             type="button"
