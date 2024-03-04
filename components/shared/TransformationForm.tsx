@@ -125,7 +125,7 @@ const TransformationForm = ({
 
     setnewTransformation(null);
     startTransition(async () => {
-      //    await updateCredits(userId, creditFee)
+         await updateCredits(userId, -1)
     });
   };
 
